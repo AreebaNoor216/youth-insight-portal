@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         String        @default("CHAPTER_PRESIDENT") // SUPER_ADMIN, CENTRAL_CABINET, CHAPTER_PRESIDENT, ALUMNI, MEMBER
+  avatar       String?
+  phone        String?
+  chapterId    String?
+  chapter      Chapter?      @relation(fields: [chapterId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model University {
+  id           String        @id @default(cuid())
+  name         String
+  shortName    String
+  city         String
+  province     String        // Khyber Pakhtunkhwa, Punjab, Sindh, Islamabad Capital Territory, Balochistan
+  country      String        @default("Pakistan")
+  logoUrl      String?
+  bannerUrl    String?
+  foundedYear  Int?
+  studentCount Int?
+  website      String?
+  chapters     Chapter[]
+}
+
+model Chapter {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String
+  universityId    String
+  university      University       @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  status          String           @default("ACTIVE") // ACTIVE, INACTIVE, PROBATION
+  establishedDate DateTime         @default(now())
+  volunteerCount  Int              @default(45)
+  eventsCount     Int              @default(12)
+  impactScore     Int              @default(92)
+  complianceScore Int              @default(96)
+  streakMonths    Int              @default(6)
+  bio             String
+  meetingSchedule String?
+  location        String
+  contactEmail    String
+  coverImage      String?
+  users           User[]
+  cabinetMembers  CabinetMember[]
+  monthlyReports  MonthlyReport[]
+  events          Event[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model CabinetMember {
+  id           String   @id @default(cuid())
+  chapterId    String
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  name         String
+  roleTitle    String   // Chapter President, Vice President, General Secretary, Department Lead, Executive Member
+  roleCategory String   // PRESIDENT, VICE_PRESIDENT, GENERAL_SECRETARY, DEPARTMENT_LEAD, EXECUTIVE_MEMBER
+  department   String?  // Media, Logistics, Outreach, Human Resources, Finance, Publications
+  email        String?
+  phone        String?
+  avatarUrl    String?
+  tenureYear   String   @default("2025-2026")
+  bio          String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model MonthlyReport {
+  id                 String    @id @default(cuid())
+  reportNumber       String    @unique
+  chapterId          String
+  chapter            Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  month              String    // January, February, March, etc.
+  year               Int       // 2026
+  title              String
+  eventSummary       String
+  attendanceCount    Int       @default(0)
+  targetAchievements String
+  speakerDetails     String?
+  feedbackRating     Float     @default(4.8)
+  complianceScore    Int       @default(95)
+  financialBudget    Float     @default(0)
+  financialSpent     Float     @default(0)
+  financialNotes     String?
+  mediaDriveLinks    String?
+  status             String    @default("SUBMITTED") // DRAFT, SUBMITTED, UNDER_REVIEW, REVISION_REQUESTED, APPROVED
+  adminFeedback      String?
+  submittedByEmail   String?
+  submittedAt        DateTime? @default(now())
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Event {
+  id             String              @id @default(cuid())
+  slug           String              @unique
+  title          String
+  scope          String              @default("CHAPTER") // NATIONAL, CHAPTER
+  chapterId      String?
+  chapter        Chapter?            @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  category       String              // Conferences, Model United Nations, Theatrical & Cultural, Soul Talks, Book Circles, Leadership Bootcamps
+  description    String
+  themeStatement String?
+  date           String              // e.g. "September 15, 2026"
+  time           String              // e.g. "10:00 AM - 4:00 PM"
+  location       String              // e.g. "Main Auditorium, University of Haripur"
+  venue          String?
+  coverImage     String?
+  speakersJson   String?             // JSON array of speakers
+  agendaJson     String?             // JSON array of agenda items
+  keyTakeaways   String?
+  status         String              @default("UPCOMING") // UPCOMING, ONGOING, COMPLETED
+  registrations  EventRegistration[]
+  createdAt      DateTime            @default(now())
+}
+
+model EventRegistration {
+  id             String   @id @default(cuid())
+  eventId        String
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fullName       String
+  email          String
+  phone          String
+  universityName String
+  department     String?
+  status         String   @default("CONFIRMED")
+  qrTicketCode   String   @unique
+  registeredAt   DateTime @default(now())
+}
+
+model AlumniProfile {
+  id                     String   @id @default(cuid())
+  fullName               String
+  email                  String   @unique
+  currentRole            String
+  currentCompany         String
+  industry               String
+  graduationYear         Int
+  universityName         String
+  pastCabinetRoles       String
+  bio                    String
+  linkedinUrl            String?
+  avatarUrl              String?
+  availableForMentorship Boolean  @default(true)
+  createdAt              DateTime @default(now())
+}
+
+model Publication {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  category    String   // Character Building, Social Literature, White Paper, Editorial
+  authorName  String
+  authorRole  String
+  readTime    String   @default("5 min read")
+  coverImage  String?
+  summary     String
+  content     String
+  publishedAt DateTime @default(now())
+}
+
+model ContactSubmission {
+  id                String   @id @default(cuid())
+  fullName          String
+  email             String
+  phone             String?
+  organization      String?
+  departmentRouting String   @default("GENERAL") // PR, MARKETING, HR, CHAPTERS, GENERAL
+  subject           String
+  message           String
+  status            String   @default("PENDING") // PENDING, IN_REVIEW, RESOLVED
+  createdAt         DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}
